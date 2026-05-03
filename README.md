@@ -1,8 +1,10 @@
 # AML Studio
 
-**AML Studio** is an open-source web portal for managing [Agent Modeling Language (AML)](https://github.com/alirion/aml) artefacts stored in Git repositories. It provides a visual interface that lets anyone in an organisation — product managers, compliance officers, legal reviewers, and engineers alike — create, browse, edit, review, and version AI agent definitions without needing a code editor or Git expertise.
+**AML Studio** is an open-source web portal for managing [Agent Modeling Language (AML)](https://alirion-io.github.io/aml/) artefacts stored in Git repositories. It provides a visual interface that lets anyone in an organisation — product managers, compliance officers, legal reviewers, and engineers alike — create, browse, edit, review, and version AI agent definitions without needing a code editor or Git expertise.
 
 > **Note:** A large part of this portal has been designed and coded with the assistance of AI (GitHub Copilot / Claude), serving as a practical example of AI-assisted software development at the application layer.
+
+[Access AML studio on Github pages](https://alirion-io.github.io/aml-studio/). Limited to public Git and local repositories.
 
 ---
 
