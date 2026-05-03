@@ -1,0 +1,426 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://alirion-io.github.io/aml/schemas/guardrail.schema.json",
+  "version": "1.3",
+  "title": "AML Guardrail Definition",
+  "description": "Compiled JSON payload for an AML guardrail definition (.guardrail.md). Validates that the compiled output conforms to the AML v1.3 specification.",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "guardrail_id",
+    "version",
+    "status",
+    "behaviour",
+    "meta"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec_version": {
+      "title": "Spec Version",
+      "type": "string",
+      "description": "AML format version. Must equal a platform-approved version string.",
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$"
+    },
+    "guardrail_id": {
+      "title": "Guardrail ID",
+      "$ref": "#/$defs/aml_id",
+      "description": "Stable, immutable identifier for this guardrail. Lowercase kebab-case. Immutable once referenced by any published agent definition."
+    },
+    "version": {
+      "title": "Version",
+      "$ref": "#/$defs/semver",
+      "description": "Semantic version of this guardrail definition. Increment whenever transport config or behavior changes."
+    },
+    "status": {
+      "title": "Status",
+      "type": "string",
+      "description": "Lifecycle state. active=usable; deprecated=usable but triggers lint warning on referencing agents; disabled=hard compile error on reference.",
+      "enum": [
+        "active",
+        "deprecated",
+        "disabled"
+      ]
+    },
+    "behaviour": {
+      "title": "Behaviour",
+      "type": "object",
+      "description": "Declares what this guardrail does and what content it can process.",
+      "required": ["result_type", "content_types"],
+      "additionalProperties": false,
+      "properties": {
+        "result_type": {
+          "title": "Result Type",
+          "type": "string",
+          "description": "Declares what kind of output this guardrail produces. score=returns a 0-10 severity integer; transform=returns modified content to replace the original; annotate=returns metadata tags added to the payload; enrich=returns content appended alongside the payload.",
+          "enum": [
+            "score",
+            "transform",
+            "annotate",
+            "enrich"
+          ]
+        },
+        "content_types": {
+          "title": "Content Types",
+          "type": "array",
+          "minItems": 1,
+          "description": "Content modalities this guardrail is able to process. The runtime passes only parameters whose type matches an entry here. Attaching a guardrail to a position with no matching parameters is a hard compile error.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "text",
+              "image",
+              "video",
+              "document"
+            ]
+          }
+        }
+      }
+    },
+    "meta": {
+      "title": "Metadata",
+      "type": "object",
+      "description": "Descriptive metadata for this guardrail. The description field is informational only and is never injected into the model's context.",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable display name shown in the guardrail registry UI."
+        },
+        "description": {
+          "title": "Description",
+          "type": "string",
+          "description": "Short description of what this guardrail checks. Informational only — never sent to the model."
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string",
+          "minLength": 1,
+          "description": "Team or individual responsible for maintaining this guardrail."
+        },
+        "tags": {
+          "title": "Tags",
+          "type": "array",
+          "description": "Searchable labels for discovery and filtering.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "last_updated": {
+          "title": "Last Updated",
+          "type": "string",
+          "format": "date",
+          "description": "ISO 8601 date of the last update to this guardrail definition."
+        }
+      }
+    },
+    "transport": {
+      "title": "Transport",
+      "description": "Invocation details for external guardrails. Omit for built-in (in-process) guardrails. Allowed types: rest-api, lambda.",
+      "oneOf": [
+        { "$ref": "#/$defs/transport_rest_api" },
+        { "$ref": "#/$defs/transport_lambda" }
+      ]
+    },
+    "invocation": {
+      "title": "Invocation",
+      "type": "object",
+      "description": "Runtime invocation policy. Required when transport is present.",
+      "additionalProperties": false,
+      "properties": {
+        "timeout_ms": {
+          "title": "Timeout ms",
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum time in milliseconds to wait for the transport response."
+        },
+        "on_timeout": {
+          "title": "On Timeout",
+          "$ref": "#/$defs/error_severity_policy",
+          "description": "Synthetic severity returned to the agent if the call times out after retries. severity=10 is equivalent to fail_closed; severity=0 is equivalent to fail_open."
+        },
+        "on_provider_error": {
+          "title": "On Provider Error",
+          "$ref": "#/$defs/error_severity_policy",
+          "description": "Synthetic severity returned to the agent on a provider error (5xx, network failure) after retries."
+        },
+        "retry_policy": {
+          "title": "Retry Policy",
+          "type": "object",
+          "description": "Retry policy on transient errors.",
+          "additionalProperties": false,
+          "properties": {
+            "max_attempts": {
+              "title": "Max Attempts",
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total call attempts including the initial one."
+            },
+            "backoff_ms": {
+              "title": "Backoff ms",
+              "type": "integer",
+              "minimum": 0,
+              "description": "Initial backoff delay in milliseconds between retries (exponential)."
+            }
+          }
+        }
+      }
+    },
+    "fallback": {
+      "title": "Fallback",
+      "type": "object",
+      "description": "Fallback policy when the primary transport is unavailable.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean",
+          "description": "If true, invoke the fallback guardrail when the primary transport fails."
+        },
+        "fallback_guardrail_id": {
+          "title": "Fallback Guardrail ID",
+          "$ref": "#/$defs/aml_id",
+          "description": "guardrail_id of the guardrail to invoke as fallback. Its own definition governs how it is called. Should share the same behaviour.result_type as the primary guardrail."
+        },
+        "emit_warning": {
+          "title": "Emit Warning",
+          "type": "boolean",
+          "description": "If true, emit a structured warning event to the audit log when the fallback activates."
+        }
+      }
+    },
+    "documentation": {
+      "title": "Documentation",
+      "type": "object",
+      "description": "Compiled from the Markdown body of the .guardrail.md file. Intended for the guardrail registry documentation UI.",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string",
+          "minLength": 1,
+          "contentMediaType": "text/markdown",
+          "description": "Compiled from the Markdown body. What this guardrail checks, when to use it, and known limitations."
+        }
+      }
+    }
+  },
+  "if": {
+    "required": ["transport"]
+  },
+  "then": {
+    "required": ["invocation"]
+  },
+  "$defs": {
+    "aml_id": {
+      "title": "AML ID",
+      "type": "string",
+      "description": "Stable, immutable AML identifier. Lowercase kebab-case. Must match ^[a-z0-9_-]{3,64}$.",
+      "pattern": "^[a-z0-9_-]{3,64}$"
+    },
+    "semver": {
+      "title": "Semver",
+      "type": "string",
+      "description": "Semantic version string (MAJOR.MINOR.PATCH).",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$"
+    },
+    "error_severity_policy": {
+      "title": "Error Severity Policy",
+      "type": "object",
+      "description": "Synthetic severity returned to the agent on error. 10=equivalent to fail_closed; 0=equivalent to fail_open.",
+      "required": ["severity"],
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "title": "Severity",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Normalized 0-10 severity value returned to the agent when this error condition occurs."
+        }
+      }
+    },
+    "cred_none": {
+      "title": "Credential — none",
+      "type": "object",
+      "description": "No authentication. Only valid for internal services on a fully trusted network boundary.",
+      "required": ["scheme"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": { "title": "Scheme", "type": "string", "const": "none" }
+      }
+    },
+
+    "cred_iam_role": {
+      "title": "Credential — iam-role",
+      "type": "object",
+      "description": "Cloud-platform identity. The runtime uses the execution environment's attached identity (AWS IAM Role, GCP Workload Identity, Azure Managed Identity). No credential is stored or provisioned.",
+      "required": ["scheme"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme": { "title": "Scheme", "type": "string", "const": "iam-role" }
+      }
+    },
+
+    "cred_api_key": {
+      "title": "Credential — api-key",
+      "type": "object",
+      "description": "Static API key sent in an HTTP header. Valid for HTTP transports only (rest-api, mcp). Requires source and header; header is required with no default to avoid silent misconfiguration.",
+      "required": ["scheme", "source", "header"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme":      { "title": "Scheme",      "type": "string", "const": "api-key" },
+        "header":      { "title": "Header",      "type": "string", "description": "HTTP header name to send the key in (e.g. X-Api-Key, Authorization)." },
+        "source":      { "title": "Source",      "type": "string", "enum": ["env", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault"], "description": "Secret backend." },
+        "name":        { "title": "Name",        "type": "string", "description": "Env var name. Required when source=env." },
+        "secret_id":   { "title": "Secret ID",   "type": "string", "description": "AWS Secrets Manager secret ID. Required when source=aws_secrets_manager." },
+        "region":      { "title": "Region",      "type": "string", "description": "AWS region. Applicable for aws_secrets_manager." },
+        "key":         { "title": "Key",         "type": "string", "description": "Key within the secret JSON object if the secret is a JSON map." },
+        "project":     { "title": "Project",     "type": "string", "description": "GCP project ID. Required when source=gcp_secret_manager." },
+        "secret":      { "title": "Secret",      "type": "string", "description": "GCP secret name. Required when source=gcp_secret_manager." },
+        "version":     { "title": "Version",     "type": "string", "description": "GCP secret version. Default: latest." },
+        "vault_url":   { "title": "Vault URL",   "type": "string", "format": "uri", "description": "Azure Key Vault URL. Required when source=azure_key_vault." },
+        "secret_name": { "title": "Secret Name", "type": "string", "description": "Azure Key Vault secret name. Required when source=azure_key_vault." }
+      },
+      "allOf": [
+        { "if": { "properties": { "source": { "const": "env" } } },                 "then": { "required": ["name"] } },
+        { "if": { "properties": { "source": { "const": "aws_secrets_manager" } } }, "then": { "required": ["secret_id"] } },
+        { "if": { "properties": { "source": { "const": "gcp_secret_manager" } } },  "then": { "required": ["project", "secret"] } },
+        { "if": { "properties": { "source": { "const": "azure_key_vault" } } },     "then": { "required": ["vault_url", "secret_name"] } }
+      ]
+    },
+
+    "cred_bearer_token": {
+      "title": "Credential — bearer-token",
+      "type": "object",
+      "description": "Bearer token sent in the Authorization: Bearer <token> header. Valid for HTTP transports only (rest-api, mcp). Requires source.",
+      "required": ["scheme", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme":      { "title": "Scheme",      "type": "string", "const": "bearer-token" },
+        "source":      { "title": "Source",      "type": "string", "enum": ["env", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault"], "description": "Secret backend." },
+        "name":        { "title": "Name",        "type": "string", "description": "Env var name. Required when source=env." },
+        "secret_id":   { "title": "Secret ID",   "type": "string", "description": "AWS Secrets Manager secret ID. Required when source=aws_secrets_manager." },
+        "region":      { "title": "Region",      "type": "string", "description": "AWS region. Applicable for aws_secrets_manager." },
+        "key":         { "title": "Key",         "type": "string", "description": "Key within the secret JSON object if the secret is a JSON map." },
+        "project":     { "title": "Project",     "type": "string", "description": "GCP project ID. Required when source=gcp_secret_manager." },
+        "secret":      { "title": "Secret",      "type": "string", "description": "GCP secret name. Required when source=gcp_secret_manager." },
+        "version":     { "title": "Version",     "type": "string", "description": "GCP secret version. Default: latest." },
+        "vault_url":   { "title": "Vault URL",   "type": "string", "format": "uri", "description": "Azure Key Vault URL. Required when source=azure_key_vault." },
+        "secret_name": { "title": "Secret Name", "type": "string", "description": "Azure Key Vault secret name. Required when source=azure_key_vault." }
+      },
+      "allOf": [
+        { "if": { "properties": { "source": { "const": "env" } } },                 "then": { "required": ["name"] } },
+        { "if": { "properties": { "source": { "const": "aws_secrets_manager" } } }, "then": { "required": ["secret_id"] } },
+        { "if": { "properties": { "source": { "const": "gcp_secret_manager" } } },  "then": { "required": ["project", "secret"] } },
+        { "if": { "properties": { "source": { "const": "azure_key_vault" } } },     "then": { "required": ["vault_url", "secret_name"] } }
+      ]
+    },
+
+    "cred_oauth2": {
+      "title": "Credential — oauth2",
+      "type": "object",
+      "description": "OAuth 2.0 dynamic token via a token broker lambda on the same cloud platform. The AML runtime invokes the lambda via iam-role (no additional credential required) to obtain a fresh bearer token before each API or MCP call. The lambda owns all token lifecycle concerns: acquisition, caching, refresh, and user-delegated lookup. The runtime sends the returned access_token as Authorization: Bearer. This keeps all OAuth business logic outside AML.",
+      "required": ["scheme", "provider", "function_id"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme":       { "title": "Scheme",       "type": "string", "const": "oauth2" },
+        "provider":     { "title": "Provider",     "type": "string", "enum": ["aws", "gcp", "azure"], "description": "Cloud provider hosting the token broker lambda. Must be the same provider as the AML runtime — invoked via iam-role with no extra credential." },
+        "function_id":  { "title": "Function ID",  "type": "string", "minLength": 1, "description": "Provider-specific identifier of the token broker function. AWS: full ARN (arn:aws:lambda:…). GCP: resource name (projects/…/functions/…). Azure: resource path or function URL." },
+        "scopes":       { "title": "Scopes",       "type": "array", "items": { "type": "string" }, "description": "OAuth 2.0 scopes to pass as context to the token broker lambda. Optional." }
+      }
+    },
+
+    "cred_service_account": {
+      "title": "Credential — service-account",
+      "type": "object",
+      "description": "Explicit service identity credential stored in a secret backend and resolved at runtime. Valid for cloud transports (lambda). The resolved secret must be a JSON object containing provider-specific connection parameters (see docs for connection objects by provider). For source=env the variable value must be a stringified JSON object. Use the key field to read a sub-object within a larger secret. Contrast with iam-role: service-account means you own and store the credential; iam-role means the platform manages it.",
+      "required": ["scheme", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "scheme":      { "title": "Scheme",      "type": "string", "const": "service-account" },
+        "source":      { "title": "Source",      "type": "string", "enum": ["env", "aws_secrets_manager", "gcp_secret_manager", "azure_key_vault"], "description": "Secret backend." },
+        "name":        { "title": "Name",        "type": "string", "description": "Env var name. Required when source=env. The variable value must be a stringified JSON object with provider-specific connection fields." },
+        "secret_id":   { "title": "Secret ID",   "type": "string", "description": "AWS Secrets Manager secret ID. Required when source=aws_secrets_manager." },
+        "region":      { "title": "Region",      "type": "string", "description": "AWS region. Applicable for aws_secrets_manager." },
+        "key":         { "title": "Key",         "type": "string", "description": "Key within the secret JSON object if the secret is a JSON map." },
+        "project":     { "title": "Project",     "type": "string", "description": "GCP project ID. Required when source=gcp_secret_manager." },
+        "secret":      { "title": "Secret",      "type": "string", "description": "GCP secret name. Required when source=gcp_secret_manager." },
+        "version":     { "title": "Version",     "type": "string", "description": "GCP secret version. Default: latest." },
+        "vault_url":   { "title": "Vault URL",   "type": "string", "format": "uri", "description": "Azure Key Vault URL. Required when source=azure_key_vault." },
+        "secret_name": { "title": "Secret Name", "type": "string", "description": "Azure Key Vault secret name. Required when source=azure_key_vault." }
+      },
+      "allOf": [
+        { "if": { "properties": { "source": { "const": "env" } } },                 "then": { "required": ["name"] } },
+        { "if": { "properties": { "source": { "const": "aws_secrets_manager" } } }, "then": { "required": ["secret_id"] } },
+        { "if": { "properties": { "source": { "const": "gcp_secret_manager" } } },  "then": { "required": ["project", "secret"] } },
+        { "if": { "properties": { "source": { "const": "azure_key_vault" } } },     "then": { "required": ["vault_url", "secret_name"] } }
+      ]
+    },
+
+    "credentials_http": {
+      "title": "Credentials (HTTP transports)",
+      "description": "Credential schemes for HTTP-based transports (rest-api, mcp): none, api-key, bearer-token, oauth2. Cloud auth (iam-role, service-account) does not apply to HTTP transports.",
+      "oneOf": [
+        { "$ref": "#/$defs/cred_none" },
+        { "$ref": "#/$defs/cred_api_key" },
+        { "$ref": "#/$defs/cred_bearer_token" },
+        { "$ref": "#/$defs/cred_oauth2" }
+      ]
+    },
+
+    "credentials_cloud": {
+      "title": "Credentials (cloud transports)",
+      "description": "Credential schemes for cloud-native transports (lambda): iam-role or service-account. HTTP-style auth does not apply to these transports.",
+      "oneOf": [
+        { "$ref": "#/$defs/cred_iam_role" },
+        { "$ref": "#/$defs/cred_service_account" }
+      ]
+    },
+
+    "transport_rest_api": {
+      "title": "Transport — rest-api",
+      "type": "object",
+      "description": "HTTP/REST endpoint transport. All credential schemes are supported.",
+      "required": ["type", "base_url", "endpoint", "credentials"],
+      "additionalProperties": false,
+      "properties": {
+        "type":         { "title": "Type",     "type": "string", "const": "rest-api" },
+        "base_url":     { "title": "Base URL", "type": "string", "format": "uri", "description": "Base URL of the service. No trailing slash." },
+        "endpoint":     { "title": "Endpoint", "type": "string", "description": "HTTP method and path, e.g. POST /check.", "pattern": "^(GET|POST|PUT|PATCH|DELETE) /" },
+        "timeout_ms":   { "title": "Timeout ms", "type": "integer", "minimum": 1 },
+        "retry_policy": {
+          "title": "Retry Policy",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_attempts": { "type": "integer", "minimum": 1 },
+            "on_status": { "type": "array", "items": { "type": "integer" } },
+            "backoff_ms": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "credentials": { "$ref": "#/$defs/credentials_http" }
+      }
+    },
+
+    "transport_lambda": {
+      "title": "Transport — lambda",
+      "type": "object",
+      "description": "Serverless cloud function transport (AWS Lambda, Azure Functions, GCP Cloud Functions, etc.). Cloud credential schemes only.",
+      "required": ["type", "provider", "function_id", "invocation_type", "credentials"],
+      "additionalProperties": false,
+      "properties": {
+        "type":             { "title": "Type",            "type": "string", "const": "lambda" },
+        "provider":         { "title": "Provider",        "type": "string", "enum": ["aws", "gcp", "azure"], "description": "Cloud provider running the function. aws=AWS Lambda; gcp=GCP Cloud Functions; azure=Azure Functions." },
+        "function_id":      { "title": "Function ID",     "type": "string", "minLength": 1, "description": "Provider-specific identifier of the function. AWS: full ARN (arn:aws:lambda:…). Azure: resource path or function URL. GCP: resource name (projects/…/functions/…)." },
+        "invocation_type":  { "title": "Invocation Type", "type": "string", "enum": ["RequestResponse", "Event"], "description": "RequestResponse=synchronous; Event=fire-and-forget." },
+        "payload_format":   { "title": "Payload Format",  "type": "string", "enum": ["json", "raw"] },
+        "credentials":      { "$ref": "#/$defs/credentials_cloud" }
+      }
+    }
+  }
+}

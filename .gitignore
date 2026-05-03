@@ -1,0 +1,24 @@
+# Claude Code local settings (contains dev machine paths and shell permissions)
+.claude/settings.local.json
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Local env files
+.env
+.env.local
+.env.*.local
+.env.*
+!**/.env.example
+
+# Common secret material
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_ed25519
