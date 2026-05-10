@@ -165,7 +165,7 @@ export const SettingsPage: React.FC = () => {
       )}
 
       {row(
-        'Language',
+        t.language,
         undefined,
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <Select
@@ -181,17 +181,17 @@ export const SettingsPage: React.FC = () => {
 
       <Divider sx={{ my: 3 }} />
 
-      {sectionHeader('Diagnostics')}
+      {sectionHeader(t.diagnostics)}
       {row(
-        'Export app state',
-        'Download the full IndexedDB state as JSON for debugging.',
+        t.exportAppState,
+        t.exportAppStateDescription,
         <Button
           size="small"
           variant="outlined"
           startIcon={<DownloadIcon fontSize="small" />}
           onClick={handleExportIdb}
         >
-          Export
+          {t.exportLabel}
         </Button>
       )}
     </Box>

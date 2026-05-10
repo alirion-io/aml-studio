@@ -133,6 +133,7 @@ const fr: Partial<Translations> = {
   connectToGit: 'Se connecter à Git',
   syncStatus: 'ÉTAT DE SYNCHRONISATION',
   gitConnection: 'CONNEXION GIT',
+  dataSection: 'Données',
 
   // Artefact list
   newArtefact: (kind: string) => `Nouveau ${kind}`,
@@ -194,6 +195,8 @@ const fr: Partial<Translations> = {
 
   // Push panel
   publishChanges: 'Publier les modifications',
+  pushingToPrefix: 'Envoi vers',
+  pushingToNewBranchPR: 'nouvelle branche → PR',
   filesReadyToPublish: (n: number) => `${n} fichier${n === 1 ? '' : 's'} prêt${n === 1 ? '' : 's'} à publier`,
   allFilesSharedMessage: 'Tous les fichiers partagent un message',
   perFileMessages: 'Chaque fichier a son propre message',
@@ -235,6 +238,11 @@ const fr: Partial<Translations> = {
   settingsTitle: 'Paramètres',
   repositorySettings: 'PARAMÈTRES DU DÉPÔT',
   userPreferences: 'PRÉFÉRENCES UTILISATEUR',
+  language: 'Langue',
+  diagnostics: 'Diagnostics',
+  exportAppState: 'Exporter l\'état de l\'application',
+  exportAppStateDescription: 'Télécharger l\'état IndexedDB complet au format JSON pour le débogage.',
+  exportLabel: 'Exporter',
   appliesToAll: 'S\'applique à tous les dépôts',
   reviewWorkflow: 'Workflow de révision',
   reviewWorkflowDescription:

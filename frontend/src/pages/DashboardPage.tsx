@@ -28,6 +28,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ErrorIcon from '@mui/icons-material/Error';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
 import { useStore, useT } from '../store/store';
+import { shadows } from '../theme/tokens';
 import type { Repository } from '../types/artefact';
 import { ARTEFACT_KINDS, KIND_PLURAL_LABELS } from '../types/artefact';
 import { relativeTime } from '../utils/relativeTime';
@@ -89,7 +90,7 @@ const RepoCard: React.FC<{
       sx={{
         '&:hover': {
           borderColor: theme.palette.primary.main,
-          boxShadow: '0 1px 3px rgba(14, 26, 31, 0.06), 0 1px 2px rgba(14, 26, 31, 0.04)',
+          boxShadow: shadows.cardHover,
           transform: 'translateY(-1px)',
         },
         height: '100%',
@@ -142,6 +143,7 @@ const RepoCard: React.FC<{
           size="small"
           onClick={(e) => { e.stopPropagation(); setAnchorEl(e.currentTarget); }}
           sx={{ ml: 1 }}
+          aria-label={`More actions for ${repo.name}`}
         >
           <MoreVertIcon fontSize="small" />
         </IconButton>
@@ -248,7 +250,7 @@ export const DashboardPage: React.FC = () => {
             component="img"
             src={theme.palette.mode === 'dark' ? './alirion-icon-transparent-dark.svg' : './alirion-icon-transparent-light.svg'}
             alt=""
-            sx={{ width: 80, opacity: 0.3 }}
+            sx={{ width: 80, opacity: 0.12 }}
             onError={(e: React.SyntheticEvent<HTMLImageElement>) => { e.currentTarget.style.display = 'none'; }}
           />
           <Typography variant="h2">{t.welcomeTitle}</Typography>

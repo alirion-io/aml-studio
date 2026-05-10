@@ -2,14 +2,12 @@
  * AML Studio — Repository Overview Page (P-03)
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Box,
   Typography,
   Button,
-  Card,
-  CardContent,
-  Grid,
+  Collapse,
   Divider,
   Chip,
   List,
@@ -28,9 +26,10 @@ import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useStore, useT } from '../store/store';
 import { ARTEFACT_KINDS, KIND_PLURAL_LABELS, KIND_URL_SEGMENTS } from '../types/artefact';
-import { kindColors } from '../theme/tokens';
+import { kindColors, kindChipColors } from '../theme/tokens';
 import { relativeTime } from '../utils/relativeTime';
 import { AddRepositoryModal } from '../components/repository/AddRepositoryModal';
 
@@ -46,7 +45,8 @@ export const OverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
-  const [connectOpen, setConnectOpen] = React.useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
+  const [dataOpen, setDataOpen] = useState(false);
 
   const repositories = useStore((s) => s.repositories);
   const openPushPanel = useStore((s) => s.openPushPanel);
@@ -56,12 +56,14 @@ export const OverviewPage: React.FC = () => {
   const repo = repositories.find((r) => r.id === repoId);
   if (!repo) return null;
 
+  const mode = theme.palette.mode as 'light' | 'dark';
   const artefactCounts = ARTEFACT_KINDS.map((kind) => ({
     kind,
     label: KIND_PLURAL_LABELS[kind],
     count: repo.artefacts.filter((a) => a.kind === kind).length,
     path: `/${repoId}/${KIND_URL_SEGMENTS[kind]}`,
-    color: kindColors[kind],
+    dotColor: kindColors[kind],
+    textColor: kindChipColors[mode][kind],
   }));
 
   const MAX_STAGED_PREVIEW = 5;
@@ -102,233 +104,215 @@ export const OverviewPage: React.FC = () => {
 
   const providerName = repo.provider === 'github' ? 'GitHub' : repo.provider === 'bitbucket' ? 'Bitbucket' : 'Local';
 
+  const statusConfig: Record<string, { label: string; color: string; Icon: React.ComponentType<{ sx?: object }> | null }> = {
+    'up-to-date': { label: 'Up to date', color: theme.palette.success.main, Icon: CheckCircleIcon },
+    behind: { label: repo.syncBehindCount ? `${repo.syncBehindCount} behind` : 'Behind', color: theme.palette.warning.main, Icon: ArrowDownwardIcon },
+    ahead: { label: `${repo.syncAheadCount ?? repo.stagedChanges.length} unpushed`, color: theme.palette.info.main, Icon: ArrowUpwardIcon },
+    conflict: { label: 'Conflict — resolve before syncing', color: theme.palette.error.main, Icon: ErrorIcon },
+    'not-connected': { label: 'Not connected', color: theme.palette.text.secondary, Icon: CloudOffIcon },
+    syncing: { label: 'Syncing…', color: theme.palette.primary.main, Icon: null },
+  };
+  const sc = statusConfig[repo.syncStatus] ?? statusConfig['not-connected'];
+
   return (
-    <Box sx={{ p: 4, maxWidth: 900, mx: 'auto' }}>
+    <Box sx={{ p: 4, maxWidth: 720, mx: 'auto' }}>
       {/* Page header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-        <Box>
-          <Typography variant="h1">{t.overview}</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {repo.fullName ?? repo.name}
-            {!repo.isLocal && ` · ${providerName}`}
-            {repo.lastSyncedAt && ` · ${t.lastSynced} ${relativeTime(repo.lastSyncedAt)}`}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {!repo.isLocal && (
-            <Button variant="outlined" size="small" startIcon={<ArrowDownwardIcon fontSize="small" />}>
-              {t.pull}
-            </Button>
-          )}
-          {staged.length > 0 && (
-            <Button variant="contained" size="small" endIcon={<ArrowUpwardIcon fontSize="small" />} onClick={openPushPanel}>
-              {t.publish}
-            </Button>
-          )}
-        </Box>
-      </Box>
+      <Typography variant="h1" sx={{ mb: 0.5 }}>{t.overview}</Typography>
+      <Typography variant="body2" color="text.secondary">
+        {repo.fullName ?? repo.name}
+        {!repo.isLocal && ` · ${providerName}`}
+        {repo.lastSyncedAt && ` · ${t.lastSynced} ${relativeTime(repo.lastSyncedAt)}`}
+      </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
-        {/* Artefacts panel */}
-        <Card elevation={0}>
-          <CardContent>
-            <Typography variant="caption" sx={{ fontWeight: 400, fontSize: '11px', letterSpacing: '0.06em', color: theme.palette.text.secondary }}>
-              ARTEFACTS
-            </Typography>
-            <Grid container spacing={1} sx={{ mt: 1 }}>
-              {artefactCounts.map(({ kind, label, count, path, color }) => (
-                <Grid size={{ xs: 6, sm: 4 }} key={kind}>
-                  <Box
-                    sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-                    onClick={() => navigate(path)}
-                  >
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color }} />
-                    <Typography variant="body2" color={count === 0 ? 'text.secondary' : 'text.primary'}>
-                      {label}:{' '}
-                      <strong style={{ color: count === 0 ? undefined : color }}>
-                        {count}
-                      </strong>
-                    </Typography>
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </CardContent>
-        </Card>
-
-        {/* Sync status / Git connection */}
-        <Card elevation={0}>
-          <CardContent>
-            {repo.isLocal ? (
-              <>
-                <Typography variant="caption" sx={{ fontWeight: 400, fontSize: '11px', letterSpacing: '0.06em', color: theme.palette.text.secondary }}>
-                  GIT CONNECTION
-                </Typography>
-                <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CloudOffIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {t.notConnectedGit}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                  {t.filesStoredLocally}
-                </Typography>
-                <Button
+      {/* ── Lead: Sync status ── */}
+      <Box
+        sx={{
+          mt: 3,
+          p: 2.5,
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: '8px',
+          backgroundColor: theme.palette.background.paper,
+        }}
+      >
+        {repo.isLocal ? (
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CloudOffIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>{t.notConnectedGit}</Typography>
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                {t.filesStoredLocally}
+              </Typography>
+            </Box>
+            <Button size="small" variant="outlined" onClick={() => setConnectOpen(true)} sx={{ flexShrink: 0 }}>
+              {t.connectToGit}
+            </Button>
+          </Box>
+        ) : (
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Chip
+                  icon={sc.Icon ? <sc.Icon sx={{ fontSize: 13, color: sc.color }} /> : undefined}
+                  label={sc.label}
                   size="small"
-                  variant="outlined"
-                  sx={{ mt: 1.5 }}
-                  onClick={() => setConnectOpen(true)}
-                >
-                  {t.connectToGit}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Typography variant="caption" sx={{ fontWeight: 500, fontSize: '11px', letterSpacing: '0.06em', color: theme.palette.text.secondary }}>
-                  {t.syncStatus}
-                </Typography>
-                <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  {(() => {
-                    const statusConfig: Record<string, { label: string; color: string; Icon: React.ComponentType<{ sx?: object }> | null }> = {
-                      'up-to-date': { label: 'Up to date', color: theme.palette.success.main, Icon: CheckCircleIcon },
-                      behind: { label: repo.syncBehindCount ? `${repo.syncBehindCount} behind` : 'Behind', color: theme.palette.warning.main, Icon: ArrowDownwardIcon },
-                      ahead: { label: `${repo.syncAheadCount ?? repo.stagedChanges.length} unpushed`, color: theme.palette.info.main, Icon: ArrowUpwardIcon },
-                      conflict: { label: 'Conflict', color: theme.palette.error.main, Icon: ErrorIcon },
-                      'not-connected': { label: 'Not connected', color: theme.palette.text.secondary, Icon: CloudOffIcon },
-                      syncing: { label: 'Syncing…', color: theme.palette.primary.main, Icon: null },
-                    };
-                    const sc = statusConfig[repo.syncStatus] ?? statusConfig['not-connected'];
-                    return (
-                      <Chip
-                        icon={sc.Icon ? <sc.Icon sx={{ fontSize: 13, color: sc.color }} /> : undefined}
-                        label={sc.label}
-                        size="small"
-                        sx={{
-                          backgroundColor: `${sc.color}1A`,
-                          color: sc.color,
-                          borderRadius: '999px',
-                          fontSize: '11px',
-                          '& .MuiChip-icon': { color: sc.color },
-                        }}
-                      />
-                    );
-                  })()}
-                  {repo.defaultBranch && (
-                    <Typography variant="caption" color="text.secondary">
-                      Branch: {repo.defaultBranch}
-                    </Typography>
-                  )}
-                </Box>
+                  sx={{
+                    backgroundColor: `${sc.color}1A`,
+                    color: sc.color,
+                    borderRadius: '999px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    '& .MuiChip-icon': { color: sc.color },
+                  }}
+                />
+                {repo.defaultBranch && (
+                  <Typography variant="caption" color="text.secondary" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                    {repo.defaultBranch}
+                  </Typography>
+                )}
                 {repo.htmlUrl && (
-                  <Link href={isSafeUrl(repo.htmlUrl) ? repo.htmlUrl : '#'} target="_blank" rel="noopener noreferrer" variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, mt: 1 }}>
+                  <Link href={isSafeUrl(repo.htmlUrl) ? repo.htmlUrl : '#'} target="_blank" rel="noopener noreferrer" variant="caption" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
                     {t.viewOn(providerName)}
                     <OpenInNewIcon sx={{ fontSize: 12 }} />
                   </Link>
                 )}
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Local changes panel */}
-        {staged.length > 0 && (
-          <Card elevation={0}>
-            <CardContent>
-              <Typography variant="caption" sx={{ fontWeight: 400, fontSize: '11px', letterSpacing: '0.06em', color: theme.palette.text.secondary }}>
-                {t.localChanges}
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {t.localChangesCount(staged.length)}
-              </Typography>
-              <Divider sx={{ my: 1 }} />
-              <List dense disablePadding>
-                {staged.slice(0, MAX_STAGED_PREVIEW).map((c) => (
-                  <ListItem key={c.artefactId} disablePadding>
-                    <ListItemText
-                      primary={`• ${c.filePath}`}
-                      slotProps={{ primary: { sx: { fontFamily: '"JetBrains Mono", monospace', fontSize: '12px' } } }}
-                    />
-                  </ListItem>
-                ))}
-                {staged.length > MAX_STAGED_PREVIEW && (
-                  <ListItem disablePadding>
-                    <ListItemText
-                      primary={`+ ${staged.length - MAX_STAGED_PREVIEW} more files`}
-                      slotProps={{ primary: { sx: { fontSize: '0.75rem', color: 'text.secondary' } } }}
-                    />
-                  </ListItem>
-                )}
-              </List>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button variant="contained" size="small" endIcon={<ArrowUpwardIcon fontSize="small" />} onClick={openPushPanel}>
-                  {t.reviewAndPublish}
-                </Button>
               </Box>
-            </CardContent>
-          </Card>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="outlined" size="small" startIcon={<ArrowDownwardIcon fontSize="small" />}>
+                  {t.pull}
+                </Button>
+                {staged.length > 0 && (
+                  <Button variant="contained" size="small" endIcon={<ArrowUpwardIcon fontSize="small" />} onClick={openPushPanel}>
+                    {t.reviewAndPublish}
+                  </Button>
+                )}
+              </Box>
+            </Box>
+          </>
         )}
+      </Box>
 
-        {/* Import & Export cards */}
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Card elevation={0}>
-              <CardContent>
-                <Typography variant="h3">{t.importTitle}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
-                  {t.importDescription}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<UploadIcon fontSize="small" />}
-                  onClick={() => fileInputRef.current?.click()}
-                >
+      {/* ── Artefacts summary row ── */}
+      <Box sx={{ mt: 3 }}>
+        <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '11px', letterSpacing: '0.07em', textTransform: 'uppercase', color: theme.palette.text.secondary }}>
+          {t.artefacts}
+        </Typography>
+        <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+          {artefactCounts.map(({ kind, label, count, path, dotColor, textColor }) => (
+            <Box
+              key={kind}
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer' }}
+              onClick={() => navigate(path)}
+            >
+              <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: dotColor, flexShrink: 0 }} />
+              <Typography variant="body2" sx={{ color: count === 0 ? 'text.secondary' : 'text.primary' }}>
+                {label}:{' '}
+                <Box component="strong" sx={{ color: count === 0 ? undefined : textColor }}>
+                  {count}
+                </Box>
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      {/* ── Local changes ── */}
+      {staged.length > 0 && (
+        <Box sx={{ mt: 3 }}>
+          <Box sx={{ mb: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '11px', letterSpacing: '0.07em', textTransform: 'uppercase', color: theme.palette.text.secondary }}>
+              {t.localChanges}
+            </Typography>
+          </Box>
+          <List dense disablePadding sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: '6px', overflow: 'hidden' }}>
+            {staged.slice(0, MAX_STAGED_PREVIEW).map((c, i) => (
+              <ListItem
+                key={c.artefactId}
+                disablePadding
+                sx={{ px: 2, py: 0.75, borderBottom: i < Math.min(staged.length, MAX_STAGED_PREVIEW) - 1 ? `1px solid ${theme.palette.divider}` : 'none' }}
+              >
+                <ListItemText
+                  primary={c.filePath}
+                  slotProps={{ primary: { sx: { fontFamily: '"JetBrains Mono", monospace', fontSize: '12px' } } }}
+                />
+              </ListItem>
+            ))}
+            {staged.length > MAX_STAGED_PREVIEW && (
+              <ListItem disablePadding sx={{ px: 2, py: 0.75 }}>
+                <ListItemText
+                  primary={`+ ${staged.length - MAX_STAGED_PREVIEW} ${t.more}`}
+                  slotProps={{ primary: { sx: { fontSize: '12px', color: 'text.secondary' } } }}
+                />
+              </ListItem>
+            )}
+          </List>
+        </Box>
+      )}
+
+      {/* ── Data section (import / export) — collapsed by default ── */}
+      <Box sx={{ mt: 3 }}>
+        <Box
+          onClick={() => setDataOpen((v) => !v)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            '&:hover': { opacity: 0.75 },
+          }}
+        >
+          <ExpandMoreIcon
+            sx={{
+              fontSize: 18,
+              color: theme.palette.text.secondary,
+              transform: dataOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
+              transition: 'transform 0.15s ease-out',
+            }}
+          />
+          <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '11px', letterSpacing: '0.07em', textTransform: 'uppercase', color: theme.palette.text.secondary }}>
+            {t.dataSection}
+          </Typography>
+        </Box>
+
+        <Collapse in={dataOpen}>
+          <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 2.5, pl: 0.5 }}>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>{t.importTitle}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t.importDescription}</Typography>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Button variant="outlined" size="small" startIcon={<UploadIcon fontSize="small" />} onClick={() => fileInputRef.current?.click()}>
                   {t.importFiles}
                 </Button>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FolderOpenIcon fontSize="small" />}
-                  onClick={() => folderInputRef.current?.click()}
-                  sx={{ ml: 1 }}
-                >
+                <Button variant="outlined" size="small" startIcon={<FolderOpenIcon fontSize="small" />} onClick={() => folderInputRef.current?.click()}>
                   {t.importFolder}
                 </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".md"
-                  style={{ display: 'none' }}
-                  onChange={handleImportFiles}
-                />
-                <input
-                  ref={folderInputRef}
-                  type="file"
-                  // @ts-expect-error webkitdirectory is not in React's typings
-                  webkitdirectory=""
-                  style={{ display: 'none' }}
-                  onChange={handleImportFiles}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Card elevation={0}>
-              <CardContent>
-                <Typography variant="h3">{t.downloadZipTitle}</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1.5 }}>
-                  {t.downloadZipDescription}
-                </Typography>
-                <Button variant="outlined" size="small" startIcon={<DownloadIcon fontSize="small" />} onClick={handleDownloadZip}>
-                  {t.downloadZip}
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
+              </Box>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>{t.downloadZipTitle}</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>{t.downloadZipDescription}</Typography>
+              <Button variant="outlined" size="small" startIcon={<DownloadIcon fontSize="small" />} onClick={handleDownloadZip}>
+                {t.downloadZip}
+              </Button>
+            </Box>
+          </Box>
+        </Collapse>
       </Box>
+
+      <input ref={fileInputRef} type="file" multiple accept=".md" style={{ display: 'none' }} onChange={handleImportFiles} />
+      <input
+        ref={folderInputRef}
+        type="file"
+        // @ts-expect-error webkitdirectory is not in React's typings
+        webkitdirectory=""
+        style={{ display: 'none' }}
+        onChange={handleImportFiles}
+      />
 
       <AddRepositoryModal open={connectOpen} onClose={() => setConnectOpen(false)} />
     </Box>

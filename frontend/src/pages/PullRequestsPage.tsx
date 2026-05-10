@@ -130,15 +130,14 @@ export const PullRequestsPage: React.FC = () => {
         <Card
           key={pr.number}
           elevation={0}
-          sx={{
-            mb: 1.5,
-            border: `1px solid ${theme.palette.divider}`,
-            borderLeft: `3px solid ${theme.palette.info.main}`,
-          }}
+          sx={{ mb: 1.5, border: `1px solid ${theme.palette.divider}` }}
         >
           <CardContent sx={{ pb: '12px !important' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Box>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+              <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: theme.palette.info.main, fontWeight: 600, mt: '3px', flexShrink: 0 }}>
+                #{pr.number}
+              </Typography>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Link
                   href={isSafeUrl(pr.htmlUrl) ? pr.htmlUrl : '#'}
                   target="_blank"
@@ -152,12 +151,9 @@ export const PullRequestsPage: React.FC = () => {
                   {t.openedBy} {pr.author} · {relativeTime(pr.createdAt)}
                 </Typography>
               </Box>
-
-              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                <Link href={pr.htmlUrl} target="_blank" rel="noopener noreferrer" sx={{ ml: 1, fontSize: '13px' }}>
-                  {repo?.provider === 'bitbucket' ? t.viewOnBitbucket : t.viewOnGitHub}
-                </Link>
-              </Box>
+              <Link href={isSafeUrl(pr.htmlUrl) ? pr.htmlUrl : '#'} target="_blank" rel="noopener noreferrer" sx={{ fontSize: '13px', flexShrink: 0 }}>
+                {repo?.provider === 'bitbucket' ? t.viewOnBitbucket : t.viewOnGitHub}
+              </Link>
             </Box>
           </CardContent>
         </Card>

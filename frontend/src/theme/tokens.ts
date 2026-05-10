@@ -115,3 +115,25 @@ export const radius = {
   lg: 12,  // modals, slide-overs
   pill: 999, // status / kind badges
 } as const;
+
+// Card elevation shadows — keyed to brandPalette.depth for consistency.
+export const shadows = {
+  cardRest: `0 1px 2px ${brandPalette.depth}0A, 0 2px 8px ${brandPalette.depth}0D`,
+  cardHover: `0 2px 8px ${brandPalette.deepCurrent}1A, 0 6px 20px ${brandPalette.deepCurrent}14`,
+} as const;
+
+// Schema type badge colors — semantic per JSON Schema type.
+// Used by ArtefactOverviewTab to colour type annotations.
+type TypeBadge = { bg: string; color: string };
+type TypeBadgeMode = { light: TypeBadge; dark: TypeBadge };
+
+export const typeColors: Record<string, TypeBadgeMode> & { _fallback: TypeBadgeMode } = {
+  string:  { dark: { bg: '#0d2818', color: '#a8e6c8' }, light: { bg: '#d4f0e4', color: '#1a5c3e' } },
+  number:  { dark: { bg: '#0a1a2c', color: '#90c8f0' }, light: { bg: '#d0e6f5', color: '#0a3a6e' } },
+  integer: { dark: { bg: '#0a1a2c', color: '#90c8f0' }, light: { bg: '#d0e6f5', color: '#0a3a6e' } },
+  boolean: { dark: { bg: '#1a0d2c', color: '#c8a8f0' }, light: { bg: '#ead8f5', color: '#3d1c8c' } },
+  array:   { dark: { bg: '#0d1a3d', color: '#90aef0' }, light: { bg: '#d0d8f5', color: '#0a206e' } },
+  object:  { dark: { bg: '#2c1400', color: '#f0c090' }, light: { bg: '#f5dec8', color: '#6b2a00' } },
+  null:    { dark: { bg: '#1a1a2e', color: '#b0b0e0' }, light: { bg: '#e8e8f5', color: '#2a2a5e' } },
+  _fallback: { dark: { bg: '#1a1a2e', color: '#b0b0e0' }, light: { bg: '#e8e8f5', color: '#2a2a5e' } },
+};

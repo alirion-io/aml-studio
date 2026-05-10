@@ -24,15 +24,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useStore } from '../../store/store';
 import type { Artefact, ArtefactKind } from '../../types/artefact';
 import { KIND_URL_SEGMENTS, KIND_PLURAL_LABELS } from '../../types/artefact';
-import { kindColors } from '../../theme/tokens';
-import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
-import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
-import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
-import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
-import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
-import FolderSpecialOutlinedIcon from '@mui/icons-material/FolderSpecialOutlined';
-import GppGoodOutlinedIcon from '@mui/icons-material/GppGoodOutlined';
-import type { SvgIconComponent } from '@mui/icons-material';
+import { kindColors, typeColors, semanticTokens } from '../../theme/tokens';
+import { KIND_ICONS } from '../shared/kindIcons';
 import agentSchema from '../../../public/schemas/agent.schema.json';
 import toolSchema from '../../../public/schemas/tool.schema.json';
 import kbSchema from '../../../public/schemas/kb.schema.json';
@@ -40,16 +33,6 @@ import iamSchema from '../../../public/schemas/iam.schema.json';
 import modelSchema from '../../../public/schemas/model.schema.json';
 import collectionSchema from '../../../public/schemas/collection.schema.json';
 import guardrailSchema from '../../../public/schemas/guardrail.schema.json';
-
-const KIND_ICONS: Record<ArtefactKind, SvgIconComponent> = {
-  agent: SmartToyOutlinedIcon,
-  tool: BuildOutlinedIcon,
-  kb: LibraryBooksOutlinedIcon,
-  iam: VpnKeyOutlinedIcon,
-  model: MemoryOutlinedIcon,
-  collection: FolderSpecialOutlinedIcon,
-  guardrail: GppGoodOutlinedIcon,
-};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const KIND_SCHEMAS: Record<ArtefactKind, Record<string, any>> = {
@@ -98,44 +81,45 @@ const Section: React.FC<{
   title: string;
   count?: number;
   defaultOpen?: boolean;
+  primary?: boolean;
   children: React.ReactNode;
-}> = ({ title, count, defaultOpen = true, children }) => {
+}> = ({ title, count, defaultOpen = true, primary = false, children }) => {
   const theme = useTheme();
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <Box sx={{ mb: 0.5 }}>
+    <Box sx={{ mb: primary ? 1 : 0.5 }}>
       <Box
         onClick={() => setOpen((v) => !v)}
         sx={{
           display: 'flex',
           alignItems: 'center',
           gap: 0.75,
-          borderLeft: `3px solid ${theme.palette.primary.main}`,
-          pl: 1.25,
-          py: 0.75,
+          px: 1.25,
+          py: primary ? 1 : 0.75,
           cursor: 'pointer',
-          borderRadius: '0 4px 4px 0',
+          borderRadius: '4px',
           userSelect: 'none',
+          backgroundColor: open && primary ? `${theme.palette.primary.main}08` : 'transparent',
           '&:hover': { backgroundColor: `${theme.palette.primary.main}0A` },
         }}
       >
         {open
-          ? <ExpandMoreIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-          : <ChevronRightIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+          ? <ExpandMoreIcon sx={{ fontSize: primary ? 18 : 16, color: theme.palette.text.secondary }} />
+          : <ChevronRightIcon sx={{ fontSize: primary ? 18 : 16, color: theme.palette.text.secondary }} />
         }
         <Typography
           sx={{
-            fontSize: '11px',
-            fontWeight: 600,
-            letterSpacing: '0.08em',
+            fontSize: primary ? '12px' : '11px',
+            fontWeight: primary ? 700 : 600,
+            letterSpacing: '0.07em',
             textTransform: 'uppercase',
-            color: theme.palette.text.secondary,
+            color: primary ? theme.palette.text.primary : theme.palette.text.secondary,
           }}
         >
           {title}
           {count !== undefined && (
-            <Box component="span" sx={{ ml: 0.75, color: theme.palette.text.disabled }}>
+            <Box component="span" sx={{ ml: 0.75, color: theme.palette.text.disabled, fontWeight: 400 }}>
               ({count})
             </Box>
           )}
@@ -143,7 +127,7 @@ const Section: React.FC<{
       </Box>
 
       {open && (
-        <Box sx={{ pt: 1.25, pb: 0.5 }}>
+        <Box sx={{ pt: primary ? 1.5 : 1.25, pb: 0.5 }}>
           {children}
         </Box>
       )}
@@ -253,20 +237,7 @@ function schemaConstraintHint(def: Record<string, any>): string | null {
   return null;
 }
 
-type BadgeTokens = { bg: string; color: string };
-const TYPE_BADGE_TOKENS: Record<string, { light: BadgeTokens; dark: BadgeTokens }> = {
-  string:  { dark: { bg: '#0d2818', color: '#a8e6c8' }, light: { bg: '#d4f0e4', color: '#1a5c3e' } },
-  number:  { dark: { bg: '#0a1a2c', color: '#90c8f0' }, light: { bg: '#d0e6f5', color: '#0a3a6e' } },
-  integer: { dark: { bg: '#0a1a2c', color: '#90c8f0' }, light: { bg: '#d0e6f5', color: '#0a3a6e' } },
-  boolean: { dark: { bg: '#1a0d2c', color: '#c8a8f0' }, light: { bg: '#ead8f5', color: '#3d1c8c' } },
-  array:   { dark: { bg: '#0d1a3d', color: '#90aef0' }, light: { bg: '#d0d8f5', color: '#0a206e' } },
-  object:  { dark: { bg: '#2c1400', color: '#f0c090' }, light: { bg: '#f5dec8', color: '#6b2a00' } },
-  null:    { dark: { bg: '#1a1a2e', color: '#b0b0e0' }, light: { bg: '#e8e8f5', color: '#2a2a5e' } },
-};
-const FALLBACK_BADGE_TOKENS: { light: BadgeTokens; dark: BadgeTokens } = {
-  dark: { bg: '#1a1a2e', color: '#b0b0e0' },
-  light: { bg: '#e8e8f5', color: '#2a2a5e' },
-};
+// Type badge tokens are now in theme/tokens.ts — imported as typeColors above.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SchemaTreeRow: React.FC<{ name: string; def: Record<string, any>; required: boolean; depth?: number }> = ({
@@ -299,12 +270,13 @@ const SchemaTreeRow: React.FC<{ name: string; def: Record<string, any>; required
   const hint       = schemaConstraintHint(def);
   const indentPx   = depth * 20 + 16;
   const mode = theme.palette.mode;
-  const nameColors = mode === 'light'
-    ? [theme.palette.text.primary, '#6d4c9c', '#4a2d85']
-    : [theme.palette.text.primary, '#b39ddb', '#9575cd'];
-  const nameColor  = nameColors[Math.min(depth, nameColors.length - 1)];
+  const nameColor = depth === 0
+    ? theme.palette.text.primary
+    : depth === 1
+      ? semanticTokens[mode].review
+      : `${semanticTokens[mode].review}CC`;
   const typeStr = Array.isArray(def.type) ? def.type.join('') : def.type as string | undefined;
-  const badgeTokens = (TYPE_BADGE_TOKENS[typeStr ?? ''] ?? FALLBACK_BADGE_TOKENS)[mode];
+  const badgeTokens = (typeColors[typeStr ?? ''] ?? typeColors._fallback)[mode];
 
   return (
     <>
@@ -347,8 +319,8 @@ const SchemaTreeRow: React.FC<{ name: string; def: Record<string, any>; required
         {required && (
           <Box component="span" sx={{
             fontSize: '10px',
-            color: mode === 'light' ? '#8a5400' : '#ff9800',
-            border: `1px solid ${mode === 'light' ? 'rgba(138,84,0,0.4)' : 'rgba(255,152,0,0.5)'}`,
+            color: semanticTokens[mode].warning,
+            border: `1px solid ${semanticTokens[mode].warning}66`,
             borderRadius: '3px', px: 0.5, lineHeight: '16px', flexShrink: 0,
           }}>
             required
@@ -604,9 +576,9 @@ export const ArtefactOverviewTab: React.FC<Props> = ({ artefact, repoId }) => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
 
-      {/* BASICS */}
+      {/* BASICS — primary tier: always open, heavier heading */}
       {metaEntries.length > 0 && (
-        <Section title="Basics" defaultOpen>
+        <Section title="Basics" defaultOpen primary>
           {metaEntries.map(([k, v]) => (
             <FieldRow
               key={k}

@@ -130,6 +130,7 @@ const en = {
   connectToGit: 'Connect to Git',
   syncStatus: 'SYNC STATUS',
   gitConnection: 'GIT CONNECTION',
+  dataSection: 'Data',
 
   // Artefact list
   newArtefact: (kind: string) => `New ${kind}`,
@@ -191,6 +192,8 @@ const en = {
 
   // Push panel
   publishChanges: 'Publish Changes',
+  pushingToPrefix: 'Pushing to',
+  pushingToNewBranchPR: 'new branch → PR',
   filesReadyToPublish: (n: number) => `${n} file${n === 1 ? '' : 's'} ready to publish`,
   allFilesSharedMessage: 'All files share a message',
   perFileMessages: 'Each file has its own message',
@@ -231,6 +234,11 @@ const en = {
   settingsTitle: 'Settings',
   repositorySettings: 'REPOSITORY SETTINGS',
   userPreferences: 'USER PREFERENCES',
+  language: 'Language',
+  diagnostics: 'Diagnostics',
+  exportAppState: 'Export app state',
+  exportAppStateDescription: 'Download the full IndexedDB state as JSON for debugging.',
+  exportLabel: 'Export',
   appliesToAll: 'Applies to all repositories',
   reviewWorkflow: 'Review Workflow',
   reviewWorkflowDescription:

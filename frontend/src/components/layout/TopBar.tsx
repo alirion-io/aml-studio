@@ -25,6 +25,7 @@ import {
   ListItemText,
   Divider,
   useTheme,
+  useMediaQuery,
   ThemeProvider,
 } from '@mui/material';
 import { buildTheme } from '../../theme/theme';
@@ -39,6 +40,7 @@ import KeyboardIcon from '@mui/icons-material/Keyboard';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CloudOffIcon from '@mui/icons-material/CloudOff';
+import MenuIcon from '@mui/icons-material/Menu';
 import { useStore, useT } from '../../store/store';
 import { SearchModal } from '../search/SearchModal';
 import { ProviderIcon } from '../shared/ProviderIcon';
@@ -55,7 +57,9 @@ const TopBarInner: React.FC = () => {
   const [themeMenuAnchor, setThemeMenuAnchor] = useState<HTMLElement | null>(null);
 
   const repositories = useStore((s) => s.repositories);
+  const openMobileSidebar = useStore((s) => s.openMobileSidebar);
   const activeRepo = repositories.find((r) => r.id === repoId);
+  const isMobile = useMediaQuery('(max-width:899px)');
   const stagedCount = activeRepo?.stagedChanges?.length ?? 0;
   const setActiveRepo = useStore((s) => s.setActiveRepo);
   const openPushPanel = useStore((s) => s.openPushPanel);
@@ -103,6 +107,18 @@ const TopBarInner: React.FC = () => {
         }}
       >
         <Toolbar sx={{ minHeight: '56px !important', px: 2, gap: 1.5 }}>
+          {/* Hamburger — shown on narrow viewports when inside a repo */}
+          {isMobile && activeRepo && (
+            <IconButton
+              size="small"
+              onClick={openMobileSidebar}
+              sx={{ color: theme.palette.text.secondary, p: 1 }}
+              aria-label="Open navigation menu"
+            >
+              <MenuIcon fontSize="small" />
+            </IconButton>
+          )}
+
           {/* Logo */}
           <Box
             component="img"

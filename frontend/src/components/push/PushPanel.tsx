@@ -34,15 +34,20 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import UndoIcon from '@mui/icons-material/Undo';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import CallMergeIcon from '@mui/icons-material/CallMerge';
+import { useNavigate } from 'react-router-dom';
 import { useStore, useT } from '../../store/store';
 import { pushChanges } from '../../api/api';
 import type { StagedChange, ArtefactKind } from '../../types/artefact';
+import { KIND_URL_SEGMENTS } from '../../types/artefact';
 import { kindChipColors, kindColors } from '../../theme/tokens';
 import { diffLines, summariseDiff, withContext, type DiffLine } from '../../utils/diff';
 
 const PANEL_WIDTH = 640;
+const PANEL_WIDTH_RESPONSIVE = { xs: '100vw', sm: `${PANEL_WIDTH}px` };
 
 interface Props {
   repoId: string;
@@ -148,9 +153,11 @@ const DiffView: React.FC<{ change: StagedChange }> = ({ change }) => {
 export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
   const theme = useTheme();
   const t = useT();
+  const navigate = useNavigate();
 
   const repositories = useStore((s) => s.repositories);
   const clearStagedChanges = useStore((s) => s.clearStagedChanges);
+  const discardStagedChange = useStore((s) => s.discardStagedChange);
   const addToast = useStore((s) => s.addToast);
   const closePushPanel = useStore((s) => s.closePushPanel);
 
@@ -171,7 +178,15 @@ export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
     return a?.validationErrors.some((e) => e.severity === 'error');
   });
 
-  const canPublish = artefactsWithErrors.length === 0 && stagedChanges.length > 0 && !repo?.isLocal;
+  const allMessagesPresent = sharedMode
+    ? sharedMessage.trim().length > 0
+    : stagedChanges.every((c) => (perFileMessages[c.artefactId] ?? '').trim().length > 0);
+
+  const canPublish =
+    artefactsWithErrors.length === 0 &&
+    stagedChanges.length > 0 &&
+    !repo?.isLocal &&
+    allMessagesPresent;
 
   const handlePublish = useCallback(async () => {
     if (!repo || !canPublish) return;
@@ -215,7 +230,7 @@ export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
       slotProps={{
         paper: {
           sx: {
-            width: PANEL_WIDTH,
+            width: PANEL_WIDTH_RESPONSIVE,
             p: 0,
             display: 'flex',
             flexDirection: 'column',
@@ -256,7 +271,24 @@ export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
               </Alert>
             )}
             {artefactsWithErrors.length > 0 && (
-              <Alert severity="error" sx={{ mb: 1.5, fontSize: '13px' }}>
+              <Alert
+                severity="error"
+                sx={{ mb: 1.5, fontSize: '13px' }}
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    sx={{ fontSize: '12px', whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      const first = artefactsWithErrors[0];
+                      navigate(`/${repoId}/${KIND_URL_SEGMENTS[first.kind as ArtefactKind]}/${first.artefactId}/edit`);
+                      onClose();
+                    }}
+                  >
+                    {t.editToFix}
+                  </Button>
+                }
+              >
                 {t.cannotPublishErrors}
               </Alert>
             )}
@@ -345,6 +377,16 @@ export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
                           {isDiffOpen ? <VisibilityOffOutlinedIcon sx={{ fontSize: 14 }} /> : <VisibilityOutlinedIcon sx={{ fontSize: 14 }} />}
                         </IconButton>
                       </Tooltip>
+                      <Tooltip title={t.discardChange}>
+                        <IconButton
+                          size="small"
+                          onClick={() => discardStagedChange(repoId, change.artefactId)}
+                          aria-label={t.discardChange}
+                          sx={{ color: theme.palette.text.disabled, '&:hover': { color: theme.palette.error.main } }}
+                        >
+                          <UndoIcon sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
 
                     {/* Per-file commit message */}
@@ -368,14 +410,25 @@ export const PushPanel: React.FC<Props> = ({ repoId, onClose }) => {
             </List>
           </Box>
 
-          {/* Publish button */}
+          {/* Publish footer */}
           <Box sx={{ px: 3, py: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+            {repo && !repo.isLocal && repo.defaultBranch && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+                <CallMergeIcon sx={{ fontSize: 14, color: theme.palette.text.disabled }} />
+                <Typography variant="caption" color="text.secondary">
+                  {t.pushingToPrefix}{' '}
+                  <Box component="span" sx={{ fontFamily: '"JetBrains Mono", monospace', color: theme.palette.text.primary }}>
+                    {repo.reviewWorkflowEnabled ? t.pushingToNewBranchPR : repo.defaultBranch}
+                  </Box>
+                </Typography>
+              </Box>
+            )}
             <Button
               variant="contained"
               fullWidth
               size="large"
               onClick={handlePublish}
-              disabled={!canPublish || isPublishing || (sharedMode && !sharedMessage.trim())}
+              disabled={!canPublish || isPublishing}
             >
               {isPublishing ? <CircularProgress size={18} color="inherit" /> : t.publishButton(stagedChanges.length)}
             </Button>

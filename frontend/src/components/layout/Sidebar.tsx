@@ -26,29 +26,14 @@ import { buildTheme } from '../../theme/theme';
 
 const darkChrome = buildTheme('dark');
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
-import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
-import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
-import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
-import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
-import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
-import FolderSpecialOutlinedIcon from '@mui/icons-material/FolderSpecialOutlined';
-import GppGoodOutlinedIcon from '@mui/icons-material/GppGoodOutlined';
+import type { SvgIconComponent } from '@mui/icons-material';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useStore, useT } from '../../store/store';
+import { useMediaQuery as useMuiMediaQuery } from '@mui/material';
 import { ARTEFACT_KINDS, KIND_PLURAL_LABELS, KIND_URL_SEGMENTS } from '../../types/artefact';
 import type { ArtefactKind } from '../../types/artefact';
-import { kindColors } from '../../theme/tokens';
-import type { SvgIconComponent } from '@mui/icons-material';
-
-const KIND_ICONS: Record<ArtefactKind, SvgIconComponent> = {
-  agent: SmartToyOutlinedIcon,
-  tool: BuildOutlinedIcon,
-  kb: LibraryBooksOutlinedIcon,
-  iam: VpnKeyOutlinedIcon,
-  model: MemoryOutlinedIcon,
-  collection: FolderSpecialOutlinedIcon,
-  guardrail: GppGoodOutlinedIcon,
-};
+import { kindChipColors } from '../../theme/tokens';
+import { KIND_ICONS } from '../shared/kindIcons';
 
 const DRAWER_WIDTH = 220;
 
@@ -81,6 +66,9 @@ const SidebarInner: React.FC = () => {
   const { repoId } = useParams<{ repoId: string }>();
   const t = useT();
   const repositories = useStore((s) => s.repositories);
+  const isMobileSidebarOpen = useStore((s) => s.isMobileSidebarOpen);
+  const closeMobileSidebar = useStore((s) => s.closeMobileSidebar);
+  const isMobile = useMuiMediaQuery(theme.breakpoints.down('md'));
   const activeRepo = repositories.find((r) => r.id === repoId);
 
   if (!repoId || !activeRepo) return null;
@@ -174,15 +162,17 @@ const SidebarInner: React.FC = () => {
 
   return (
     <Drawer
-      variant="permanent"
+      variant={isMobile ? 'temporary' : 'permanent'}
+      open={isMobile ? isMobileSidebarOpen : true}
+      onClose={isMobile ? closeMobileSidebar : undefined}
       sx={{
-        width: DRAWER_WIDTH,
+        width: isMobile ? 0 : DRAWER_WIDTH,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
           boxSizing: 'border-box',
-          top: 56,
-          height: 'calc(100% - 56px)',
+          top: isMobile ? 0 : 56,
+          height: isMobile ? '100%' : 'calc(100% - 56px)',
         },
       }}
     >
@@ -221,7 +211,7 @@ const SidebarInner: React.FC = () => {
             navItem(KIND_PLURAL_LABELS[kind], KIND_URL_SEGMENTS[kind], {
               badge: artefactCounts[kind],
               icon: KIND_ICONS[kind],
-              iconColor: kindColors[kind],
+              iconColor: kindChipColors[theme.palette.mode as 'light' | 'dark'][kind],
             })
           )}
         </List>

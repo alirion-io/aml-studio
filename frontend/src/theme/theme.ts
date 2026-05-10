@@ -19,7 +19,7 @@
 
 import { createTheme } from '@mui/material';
 import type { PaletteMode } from '@mui/material';
-import { brandPalette, kindChipColors, kindColors, radius, semanticTokens, typography } from './tokens';
+import { brandPalette, kindChipColors, kindColors, radius, semanticTokens, shadows, typeColors, typography } from './tokens';
 
 export function buildTheme(mode: PaletteMode) {
   const tokens = mode === 'dark' ? semanticTokens.dark : semanticTokens.light;
@@ -220,4 +220,4 @@ export function buildTheme(mode: PaletteMode) {
   });
 }
 
-export { kindChipColors, kindColors, brandPalette, semanticTokens, radius };
+export { kindChipColors, kindColors, brandPalette, semanticTokens, radius, shadows, typeColors };

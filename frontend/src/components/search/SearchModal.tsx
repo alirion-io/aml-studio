@@ -142,7 +142,7 @@ export const SearchModal: React.FC<Props> = ({ open, onClose, repoId }) => {
       slotProps={{
         paper: {
           sx: {
-            width: 640,
+            width: 'min(640px, 100vw)',
             maxHeight: '70vh',
             borderRadius: '8px',
             overflow: 'hidden',

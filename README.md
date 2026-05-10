@@ -5,7 +5,6 @@
 > **Note:** A large part of this portal has been designed and coded with the assistance of AI (GitHub Copilot / Claude), serving as a practical example of AI-assisted software development at the application layer.
 
 [Access AML studio on Github pages](https://alirion-io.github.io/aml-studio/). Limited to public Git and local repositories.
-
 ---
 
 ## Why AML Studio?

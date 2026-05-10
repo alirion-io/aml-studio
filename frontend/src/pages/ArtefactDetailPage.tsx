@@ -14,6 +14,7 @@ import {
   Tab,
   Chip,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import EditIcon from '@mui/icons-material/Edit';
@@ -34,6 +35,7 @@ interface Props {
 
 export const ArtefactDetailPage: React.FC<Props> = ({ kind }) => {
   const theme = useTheme();
+  const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const { repoId, artefactId } = useParams<{ repoId: string; artefactId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -71,10 +73,24 @@ export const ArtefactDetailPage: React.FC<Props> = ({ kind }) => {
   if (!repo) return null;
   if (!artefact) {
     return (
-      <Box sx={{ p: 4 }}>
-        <Typography color="error">Artefact not found: {artefactId}</Typography>
-        <Button onClick={() => navigate(`/${repoId}/${urlSegment}`)} sx={{ mt: 2 }}>
-          Back to {kindLabel}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 6,
+          gap: 1.5,
+          textAlign: 'center',
+        }}
+      >
+        <Typography variant="h2" sx={{ fontWeight: 500 }}>{t.artefactNotFound(artefactId ?? '')}</Typography>
+        <Typography variant="body2" color="text.secondary">
+          It may have been deleted or the URL is incorrect.
+        </Typography>
+        <Button variant="outlined" size="small" onClick={() => navigate(`/${repoId}/${urlSegment}`)} sx={{ mt: 1 }}>
+          {t.back} to {kindLabel}
         </Button>
       </Box>
     );
@@ -146,20 +162,20 @@ export const ArtefactDetailPage: React.FC<Props> = ({ kind }) => {
           </Button>
         </Box>
 
-        {/* ── Artefact header ── */}
+        {/* ── Artefact header — collapses on scroll ── */}
         <Box sx={{
           px: 3,
           pt: scrolled ? 1 : 2,
           pb: scrolled ? 0.75 : 1.5,
           flexShrink: 0,
-          transition: 'padding 0.2s ease',
+          // padding snaps instantly — layout properties are never animated
         }}>
           {/* Name */}
           <Typography variant="h1" sx={{
             fontWeight: 600,
             fontSize: scrolled ? '15px' : '24px',
             mb: scrolled ? 0.25 : 0.75,
-            transition: 'font-size 0.2s ease, margin-bottom 0.2s ease',
+            // font-size / margin snap instantly; no layout-property transition
             lineHeight: 1.3,
           }}>
             {artefact.displayName || artefact.id}
@@ -172,7 +188,6 @@ export const ArtefactDetailPage: React.FC<Props> = ({ kind }) => {
               fontSize: '12px',
               color: theme.palette.text.secondary,
               mb: (!scrolled && description) ? 1.5 : 0,
-              transition: 'margin-bottom 0.2s ease',
             }}
           >
             {artefact.id}
@@ -180,12 +195,13 @@ export const ArtefactDetailPage: React.FC<Props> = ({ kind }) => {
             {artefact.owner && <span> · {artefact.owner}</span>}
           </Typography>
 
-          {/* Description — hidden when scrolled */}
+          {/* Description — fades on scroll (opacity only; no layout-property animation) */}
           <Box sx={{
-            maxHeight: scrolled ? 0 : '200px',
             opacity: scrolled ? 0 : 1,
+            pointerEvents: scrolled ? 'none' : 'auto',
+            maxHeight: scrolled ? 0 : '200px',
             overflow: 'hidden',
-            transition: 'max-height 0.2s ease, opacity 0.15s ease',
+            transition: prefersReducedMotion ? 'none' : 'opacity 0.15s ease-out',
           }}>
             {description && (
               <Typography

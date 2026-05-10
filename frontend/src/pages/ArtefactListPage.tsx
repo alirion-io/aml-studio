@@ -32,6 +32,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import ErrorIcon from '@mui/icons-material/Error';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore, useT } from '../store/store';
+import { shadows } from '../theme/tokens';
 import type { Artefact, ArtefactKind } from '../types/artefact';
 import { KIND_PLURAL_LABELS, KIND_URL_SEGMENTS } from '../types/artefact';
 import { KindBadge } from '../components/shared/KindBadge';
@@ -64,7 +65,7 @@ const ArtefactCard: React.FC<{
         mb: 1.5,
         '&:hover': {
           borderColor: theme.palette.primary.main,
-          boxShadow: '0 1px 3px rgba(14, 26, 31, 0.06)',
+          boxShadow: shadows.cardHover,
         },
       }}
     >

@@ -25,7 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/store';
 import type { Artefact, ArtefactKind } from '../../types/artefact';
 import { ARTEFACT_KINDS, KIND_LABELS, KIND_URL_SEGMENTS } from '../../types/artefact';
-import { kindColors } from '../../theme/tokens';
+import { kindColors, kindChipColors } from '../../theme/tokens';
 
 interface Props {
   repoId: string;
@@ -154,7 +154,7 @@ export const DependencyGraph: React.FC<Props> = ({ repoId, focusArtefactId }) =>
           selector: 'node',
           style: {
             'background-color': (ele: cytoscape.NodeSingular) => `${kindColors[ele.data('kind') as ArtefactKind] ?? '#888'}26`,
-            'border-color': (ele: cytoscape.NodeSingular) => kindColors[ele.data('kind') as ArtefactKind] ?? '#888',
+            'border-color': (ele: cytoscape.NodeSingular) => kindChipColors[theme.palette.mode as 'light' | 'dark'][ele.data('kind') as ArtefactKind] ?? '#888',
             'border-width': (ele: cytoscape.NodeSingular) => (ele.data('isFocus') ? 2.5 : 1.5),
             'label': 'data(label)',
             'font-family': '"Sora", sans-serif',
@@ -286,8 +286,8 @@ export const DependencyGraph: React.FC<Props> = ({ repoId, focusArtefactId }) =>
               sx={{
                 fontSize: '11px',
                 backgroundColor: selectedKinds.includes(k) ? `${kindColors[k]}26` : 'transparent',
-                color: selectedKinds.includes(k) ? kindColors[k] : theme.palette.text.disabled,
-                border: `1px solid ${selectedKinds.includes(k) ? kindColors[k] : theme.palette.divider}`,
+                color: selectedKinds.includes(k) ? kindChipColors[theme.palette.mode as 'light' | 'dark'][k] : theme.palette.text.disabled,
+                border: `1px solid ${selectedKinds.includes(k) ? kindChipColors[theme.palette.mode as 'light' | 'dark'][k] : theme.palette.divider}`,
                 borderRadius: '999px',
               }}
             />
@@ -361,7 +361,7 @@ export const DependencyGraph: React.FC<Props> = ({ repoId, focusArtefactId }) =>
                 size="small"
                 sx={{
                   backgroundColor: `${kindColors[selectedNode.kind]}1A`,
-                  color: kindColors[selectedNode.kind],
+                  color: kindChipColors[theme.palette.mode as 'light' | 'dark'][selectedNode.kind],
                   fontSize: '10px',
                   height: 18,
                   borderRadius: '999px',

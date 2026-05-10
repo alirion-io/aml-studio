@@ -25,27 +25,10 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { useNavigate } from 'react-router-dom';
 import type { Artefact, ArtefactKind } from '../../types/artefact';
 import { KIND_URL_SEGMENTS, KIND_PLURAL_LABELS } from '../../types/artefact';
-import { kindColors } from '../../theme/tokens';
+import { kindChipColors } from '../../theme/tokens';
 import { StatusBadge } from '../shared/StatusBadge';
 import { useT } from '../../store/store';
-import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
-import BuildOutlinedIcon from '@mui/icons-material/BuildOutlined';
-import LibraryBooksOutlinedIcon from '@mui/icons-material/LibraryBooksOutlined';
-import VpnKeyOutlinedIcon from '@mui/icons-material/VpnKeyOutlined';
-import MemoryOutlinedIcon from '@mui/icons-material/MemoryOutlined';
-import FolderSpecialOutlinedIcon from '@mui/icons-material/FolderSpecialOutlined';
-import GppGoodOutlinedIcon from '@mui/icons-material/GppGoodOutlined';
-import type { SvgIconComponent } from '@mui/icons-material';
-
-const KIND_ICONS: Record<ArtefactKind, SvgIconComponent> = {
-  agent: SmartToyOutlinedIcon,
-  tool: BuildOutlinedIcon,
-  kb: LibraryBooksOutlinedIcon,
-  iam: VpnKeyOutlinedIcon,
-  model: MemoryOutlinedIcon,
-  collection: FolderSpecialOutlinedIcon,
-  guardrail: GppGoodOutlinedIcon,
-};
+import { KIND_ICONS } from '../shared/kindIcons';
 
 
 interface PanelCardProps {
@@ -59,7 +42,7 @@ const PanelCard: React.FC<PanelCardProps> = ({ artefact, isSelected, repoId, kin
   const theme = useTheme();
   const navigate = useNavigate();
   const KindIcon = KIND_ICONS[kind];
-  const kindColor = kindColors[kind];
+  const kindColor = kindChipColors[theme.palette.mode as 'light' | 'dark'][kind];
   const metaDesc: string | undefined =
     artefact.frontMatter?.meta?.description as string | undefined ??
     artefact.frontMatter?.meta?.summary as string | undefined;
@@ -76,14 +59,11 @@ const PanelCard: React.FC<PanelCardProps> = ({ artefact, isSelected, repoId, kin
         cursor: 'pointer',
         borderBottom: `1px solid ${theme.palette.divider}`,
         backgroundColor: isSelected
-          ? `${theme.palette.primary.main}14`
+          ? `${theme.palette.primary.main}22`
           : 'transparent',
-        borderLeft: isSelected
-          ? `3px solid ${theme.palette.primary.main}`
-          : '3px solid transparent',
         '&:hover': {
           backgroundColor: isSelected
-            ? `${theme.palette.primary.main}1f`
+            ? `${theme.palette.primary.main}2e`
             : `${theme.palette.primary.main}08`,
         },
         transition: 'background-color 0.1s',

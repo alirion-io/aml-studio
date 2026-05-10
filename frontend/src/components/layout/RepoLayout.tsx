@@ -164,7 +164,13 @@ export const RepoLayout: React.FC = () => {
                     {leafLabel}
                   </MuiLink>
                 ) : (
-                  <Typography color="text.primary" sx={{ fontSize: '12px', fontWeight: 500 }}>
+                  <Typography
+                    sx={{
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      color: isArtefactSegment ? kindColors[isArtefactSegment] : 'text.primary',
+                    }}
+                  >
                     {leafLabel}
                   </Typography>
                 )
@@ -178,15 +184,6 @@ export const RepoLayout: React.FC = () => {
           </Box>
         )}
 
-        {/* Kind colour gradient accent — shown on all artefact-kind pages */}
-        {isArtefactSegment && (
-          <Box
-            sx={{
-              height: '3px',
-              background: `linear-gradient(to right, ${kindColors[isArtefactSegment]}, transparent)`,
-            }}
-          />
-        )}
 
         {/* Unpushed changes banner — dismissible */}
         {stagedCount > 0 && !bannerDismissed && (

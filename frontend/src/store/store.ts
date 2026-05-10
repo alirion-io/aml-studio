@@ -40,6 +40,7 @@ interface AppState {
   translations: Translations;
   isPushPanelOpen: boolean;
   isSearchOpen: boolean;
+  isMobileSidebarOpen: boolean;
   toasts: Toast[];
 
   // ─── Actions: Repositories
@@ -53,6 +54,7 @@ interface AppState {
   loadArtefactsFromFiles: (repoId: string, files: { path: string; content: string }[]) => void;
   saveArtefactLocally: (repoId: string, artefactId: string, rawContent: string, kind: ArtefactKind, filePath: string) => void;
   deleteArtefactLocally: (repoId: string, artefactId: string) => void;
+  discardStagedChange: (repoId: string, artefactId: string) => void;
   clearStagedChanges: (repoId: string) => void;
 
   // ─── Actions: UI
@@ -64,6 +66,8 @@ interface AppState {
   closePushPanel: () => void;
   openSearch: () => void;
   closeSearch: () => void;
+  openMobileSidebar: () => void;
+  closeMobileSidebar: () => void;
   addToast: (toast: Omit<Toast, 'id'>) => void;
   removeToast: (id: string) => void;
 }
@@ -145,6 +149,7 @@ export const useStore = create<AppState>()(
       activeRepoId: null,
       isPushPanelOpen: false,
       isSearchOpen: false,
+      isMobileSidebarOpen: false,
       toasts: [],
 
       preferences: {
@@ -292,6 +297,40 @@ export const useStore = create<AppState>()(
         });
       },
 
+      discardStagedChange: (repoId, artefactId) => {
+        set((s) => {
+          const repo = s.repositories.find((r) => r.id === repoId);
+          if (!repo) return s;
+          const change = repo.stagedChanges.find((c) => c.artefactId === artefactId);
+          if (!change) return s;
+
+          let newArtefacts = repo.artefacts;
+
+          if (change.changeType === 'added') {
+            newArtefacts = repo.artefacts.filter((a) => a.id !== artefactId);
+          } else if (change.originalContent) {
+            const restored = buildArtefact(change.filePath, change.originalContent);
+            if (restored) {
+              const issues = validateArtefact(change.kind, restored.frontMatter);
+              const restoredArtefact: Artefact = { ...restored, isDirty: false, validationErrors: issues };
+              const idx = repo.artefacts.findIndex((a) => a.id === artefactId);
+              newArtefacts = idx >= 0
+                ? repo.artefacts.map((a, i) => (i === idx ? restoredArtefact : a))
+                : [...repo.artefacts, restoredArtefact];
+            }
+          }
+
+          const newChanges = repo.stagedChanges.filter((c) => c.artefactId !== artefactId);
+          return {
+            repositories: s.repositories.map((r) =>
+              r.id === repoId
+                ? { ...r, artefacts: newArtefacts, stagedChanges: newChanges, syncStatus: newChanges.length > 0 ? 'ahead' : 'up-to-date' }
+                : r
+            ),
+          };
+        });
+      },
+
       clearStagedChanges: (repoId) => {
         set((s) => ({
           repositories: s.repositories.map((r) =>
@@ -324,6 +363,8 @@ export const useStore = create<AppState>()(
       closePushPanel: () => set({ isPushPanelOpen: false }),
       openSearch: () => set({ isSearchOpen: true }),
       closeSearch: () => set({ isSearchOpen: false }),
+      openMobileSidebar: () => set({ isMobileSidebarOpen: true }),
+      closeMobileSidebar: () => set({ isMobileSidebarOpen: false }),
 
       addToast: (toast) => {
         const id = crypto.randomUUID();

@@ -5,3 +5,18 @@
 body {
   margin: 0;
 }
+
+/* Global focus ring — light mode default, switched by data-theme in dark mode */
+:focus-visible {
+  outline: 2px solid #1a6b8a;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :focus-visible {
+    outline-color: #4ab8d8;
+  }
+}
+
+/* MUI already sets focus rings on its own components; this covers any native
+   elements (links, inputs not inside MUI) that escape the component system. */
